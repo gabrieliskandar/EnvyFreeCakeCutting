@@ -1,7 +1,14 @@
 from typing import List, Tuple, Dict
-from CakeValuation import CakeValuation
+from CakeValuation import CakeValuation, compareImaginaryValues
 
-def core(cutterAgent: int, agents: List[CakeValuation], cake: Tuple[int, int]) -> Dict[Tuple[int, int], int]:
+def core(cutterAgent: int, agents: List[CakeValuation], cake: Tuple[int, int]) -> Dict[Tuple[int, int, Tuple[int]], int]:
+    # Set the imaginary values for each agent, note that I'm using significantly less values due to memory constraints
+    imaginaryValueSize = pow(len(agents), 3) #pow(len(agents), 3) * pow(pow(len(agents), 2), len(agents))
+    offset = 0
+    for agent in agents:
+        agent.setImaginaryValues([i + offset for i in range(imaginaryValueSize, 0, -1)])
+        offset += imaginaryValueSize
+
     cakeCuts = agents[cutterAgent].divideCakeEqually(len(agents))
     remainingAgents = [agent for i, agent in enumerate(agents) if i != cutterAgent]
 
@@ -10,9 +17,10 @@ def core(cutterAgent: int, agents: List[CakeValuation], cake: Tuple[int, int]) -
     cakeCuts.insert(len(cakeCuts), cake[1])
 
     # Create a list of tuples that represent the pieces of cake
-    cakePieces = [(cakeCuts[i], cakeCuts[i+1]) for i in range(0, len(cakeCuts) - 1)]
+    cakePieces = [(cakeCuts[i], cakeCuts[i+1], tuple([agent.getNextImaginaryValue() for agent in agents])) for i in range(0, len(cakeCuts) - 1)]
     print(cakePieces)
-    allocation = subCore(cakePieces, remainingAgents, [0 for i in range(0, len(remainingAgents))])
+
+    allocation = subCore(cakePieces, remainingAgents, [(0,()) for i in range(0, len(remainingAgents))])
 
     print(allocation)
 
@@ -25,12 +33,12 @@ def core(cutterAgent: int, agents: List[CakeValuation], cake: Tuple[int, int]) -
     return allocation
 
     
-def subCore(cakePieces: List[Tuple[int, int]], agents: List[CakeValuation], benchmarks: List[int]) -> Dict[Tuple[int, int], int]:
-    print("Enter SubCore")
+def subCore(cakePieces: List[Tuple[int, int, Tuple[int]]], agents: List[CakeValuation], benchmarks: List[Tuple[int,Tuple[int]]]) -> Dict[Tuple[int, int, Tuple[int]], int]:
+    print(f"Enter SubCore with cake pieces: {cakePieces}, agents: {[agent.getId() for agent in agents]}, benchmarks: {benchmarks}")
     agentRankings = [agent.rankPiecesByValue(cakePieces) for agent in agents]
     # Shows what agent owns which piece
     pieceAllocations = {cakePiece: -1 for cakePiece in cakePieces}
-    pieceSingleTrim = {cakePiece: cakePiece[0] for cakePiece in cakePieces}
+    pieceSingleTrim = {cakePiece: (cakePiece[0], cakePiece[2]) for cakePiece in cakePieces}
     newBenchmarks = benchmarks.copy()
 
     for m in range(0, len(agents)):
@@ -40,33 +48,45 @@ def subCore(cakePieces: List[Tuple[int, int]], agents: List[CakeValuation], benc
             pieceAllocations[agentRankings[m][0]] = m
         else:
             # First m agents are contesting for same m-1 pieces, called contested pieces
-            # For each agent j, set benchmark[j] to the max of benchmark[j] or value of the uncontested piece with highest value 
+            # For each agent j, set newBenchmarks[j] to the max of benchmark[j] or value of the uncontested piece with highest value 
             for j in range(0, m+1):
                 for piece in agentRankings[j]:
                     if pieceAllocations[piece] == -1:
-                        newBenchmarks[j] = max(benchmarks[j], agents[j].evalCakePiece(piece[0], piece[1]))
+                        if agents[j].evalCakePiece(piece[0], piece[1]) > benchmarks[j][0]:
+                            newBenchmarks[j] = (agents[j].evalCakePiece(piece[0], piece[1]), piece[2])
                         break
             
-            # For each piece, store the trims as a list of tuples (agent, trim)
+            # For each piece, store the trims as a list of tuples (agent, trim, (imaginary values))
             pieceTrims = {piece: [] for piece in cakePieces}
 
             # For each agent 0 to m, place a trim on all contested pieces so that contested piece on right has value equal to benchmark[j]
             for j in range(0, m+1):
                 for piece in agentRankings[j]:
                     # If the piece is allocated and the agent's value is higher than the benchmark, trim the piece
-                    if pieceAllocations[piece] != -1 and agents[j].evalCakePiece(piece[0], piece[1]) > newBenchmarks[j]:
-                        trim = agents[j].trimPieceToValue(piece[0], piece[1], newBenchmarks[j])
-                        pieceTrims[piece].append((j, trim))
-                        print(f"Agent {agents[j].getId()} trims piece {cakePieces.index(piece) + 1} to {trim}")
+                    if pieceAllocations[piece] != -1 and agents[j].evalCakePiece(piece[0], piece[1]) > newBenchmarks[j][0]:
+                        trim = agents[j].trimPieceToValue(piece[0], piece[1], newBenchmarks[j][0])
+                        imaginaryValues = newBenchmarks[j][1] + (agents[j].getNextImaginaryValue(), )
+                        pieceTrims[piece].append((j, trim, imaginaryValues))
+                        print(f"Agent {agents[j].getId()} trims piece {cakePieces.index(piece) + 1} to {trim} with imaginary values {imaginaryValues}")
 
             agentWithMostTrim = []
             # Let W be list of agents who trimmed most in some piece
-            for trims in pieceTrims.values():
+            for (piece, trims) in pieceTrims.items():
                 if (len(trims) > 0):
-                    maxTrim = max([trim for trim in trims], key=lambda trim: trim[1])
+                    # Find the max trim made by an agent
+                    maxTrim = trims[0]
+                    for trim in trims:
+                        if (trim[1] > maxTrim[1]):
+                            maxTrim = trim
+                        elif (trim[1] == maxTrim[1] and trim[0] != maxTrim[0]):
+                            print("Tie between ", agents[maxTrim[0]].getId(), " and ", agents[trim[0]].getId())
+                            # If the current max has a smaller imaginary value (aka a bigger imaginary piece), then the competing agent cut smaller
+                            if (compareImaginaryValues(maxTrim[2], trim[2])):
+                                maxTrim = trim
+
                     if (maxTrim[0] not in agentWithMostTrim):
                         agentWithMostTrim.append(maxTrim[0])
-            print("Agents with most trim: ", agentWithMostTrim)
+            print("Agents with most trim: ", [agents[agent].getId() for agent in agentWithMostTrim])
 
             while (len(agentWithMostTrim) < m):
                 # Ignore the previous trims of agents in W, and forget previous allocations
@@ -74,11 +94,21 @@ def subCore(cakePieces: List[Tuple[int, int]], agents: List[CakeValuation], benc
                 newCakePieces = []
                 for piece in cakePieces:
                     if pieceAllocations[piece] != -1:
-                        rightMostTrim = piece[0]
+                        # Current most right is the left end of the piece
+                        maxTrim = (-1, piece[0], piece[2])
                         for trim in pieceTrims[piece]:
                             if trim[0] not in agentWithMostTrim:
-                                rightMostTrim = max(rightMostTrim, trim[1])
-                        newCakePieces.append((rightMostTrim, piece[1]))
+                                if (trim[1] > maxTrim[1] or (trim[1] == maxTrim[1] and maxTrim[0] == -1)):
+                                    maxTrim = trim
+                                elif (trim[1] == maxTrim[1]):
+                                    # Handle tie with imaginary values
+                                    print("Tie between ", agents[maxTrim[0]].getId(), " and ", agents[trim[0]].getId())
+
+                                    # If the current max has a smaller imaginary value (aka a bigger imaginary piece), then the competing agent cut smaller
+                                    if (compareImaginaryValues(maxTrim[2], trim[2])):
+                                        maxTrim = trim
+
+                        newCakePieces.append((maxTrim[1], piece[1], maxTrim[2]))
 
                 returnedAllocations = subCore(newCakePieces, [agents[i] for i in agentWithMostTrim], [newBenchmarks[i] for i in agentWithMostTrim])
                 unallocatedPieces = []
@@ -92,43 +122,50 @@ def subCore(cakePieces: List[Tuple[int, int]], agents: List[CakeValuation], benc
                                 break
                             agent = [i for i in range(0, m+1) if agents[i].getId() == agentId][0]
                             pieceAllocations[piece] = agent
+                            newBenchmarks[agent] = (agents[agent].evalCakePiece(allocatedPiece[0], allocatedPiece[1]), allocatedPiece[2])
                             print(f"Agent {agents[agent].getId()} got piece {cakePieces.index(piece) + 1} from inner subCore")
                             break
                 
                 # Add an agent whose trim is on an unallocated piece
                 newAgentI = -1
                 for piece in unallocatedPieces:
-                    for trim in pieceTrims[piece]:
-                        if (len(trims) > 0):
-                            # Get the max trim made by agents not in W
-                            trimsByNotWAgents = [trim for trim in trims if trim[0] not in agentWithMostTrim]
-                            if (len(trimsByNotWAgents) > 0):
-                                maxTrim = max(trimsByNotWAgents, key=lambda trim: trim[1])
-                                newAgentI = maxTrim[0]
-                                break
-                    if (newAgentI != -1):
+                    # Get the max trim made by agents not in W
+                    trimsByNotWAgents = [trim for trim in pieceTrims[piece] if trim[0] not in agentWithMostTrim]
+                    if (len(trimsByNotWAgents) > 0):
+                        maxTrim = trimsByNotWAgents[0]
+                        for trim in trimsByNotWAgents:
+                            if trim[1] > maxTrim[1]:
+                                maxTrim = trim
+                            elif trim[1] == maxTrim[1] and trim[0] != maxTrim[0]:
+                                # Handle tie with imaginary values
+                                print("Tie between ", agents[maxTrim[0]].getId(), " and ", agents[trim[0]].getId())
+
+                                # If the current max has a smaller imaginary value (aka a bigger imaginary piece), then the competing agent cut smaller
+                                if (compareImaginaryValues(maxTrim[2], trim[2])):
+                                    maxTrim = trim
+
+                        newAgentI = maxTrim[0]
+                        pieceAllocations[piece] = newAgentI
+                        newBenchmarks[newAgentI] = (agents[newAgentI].evalCakePiece(maxTrim[1], piece[1]), maxTrim[2])
                         break
                 agentWithMostTrim.append(newAgentI)
                 if (newAgentI == -1):
                     print("Error: No agent to add to W")
                     return None
                 print(f"Agent {agents[newAgentI].getId()} is added to W")
-            
+
             # There can only be 1 agent not in W
             agentNotInW = [i for i in range(0, m+1) if i not in agentWithMostTrim][0]
             newCakePieces = []
-            # Get set of contested pieces ignoring the port left of the trim made by agent not in W.
+            # Get set of contested pieces ignoring the part left of the trim made by agent not in W.
             for piece in cakePieces:
                 if pieceAllocations[piece] != -1:
-                    rightMostTrim = piece[0]
+                    rightMostTrim = (-1, piece[0], piece[2])
                     for trim in pieceTrims[piece]:
                         if trim[0] == agentNotInW:
-                            rightMostTrim = trim[1]
+                            rightMostTrim = trim
                             break
-                    newCakePieces.append((rightMostTrim, piece[1]))
-                    pieceSingleTrim[piece] = rightMostTrim
-            
-            print("Current cake trims: ", pieceSingleTrim)
+                    newCakePieces.append((rightMostTrim[1], piece[1], rightMostTrim[2]))
             
             # Run SubCore on all agents in W and set of new pieces
             returnedAllocations = subCore(newCakePieces, [agents[i] for i in agentWithMostTrim], [newBenchmarks[i] for i in agentWithMostTrim])
@@ -138,9 +175,12 @@ def subCore(cakePieces: List[Tuple[int, int]], agents: List[CakeValuation], benc
                     if (allocatedPiece[1] == piece[1]):
                         agent = [i for i in range(0, m+1) if agents[i].getId() == agentId][0]
                         pieceAllocations[piece] = agent
+                        pieceSingleTrim[piece] = (allocatedPiece[0], allocatedPiece[2])
                         print(f"Agent {agents[agent].getId()} got piece {cakePieces.index(piece) + 1} from outer subCore")
                         break
             
+            print("Current cake trims: ", pieceSingleTrim)
+
             # Remaining agent gets their most preferred uncontested piece
             for piece in agentRankings[agentNotInW]:
                 if pieceAllocations[piece] == -1:
@@ -152,19 +192,19 @@ def subCore(cakePieces: List[Tuple[int, int]], agents: List[CakeValuation], benc
     # Construct the partial envy-free allocation. If a piece is trimmed, the left trimmed part belongs to no agent.
     envyFreeAllocation = {}
     for (piece, agent) in pieceAllocations.items():
-        if (pieceSingleTrim[piece] != piece[0]):
-            ignoredPiece = (piece[0], pieceSingleTrim[piece])
+        if (pieceSingleTrim[piece][0] != piece[0]):
+            ignoredPiece = (piece[0], pieceSingleTrim[piece][0], piece[2])
             envyFreeAllocation[ignoredPiece] = -1
-        newPiece = (pieceSingleTrim[piece], piece[1])
+            newPiece = (pieceSingleTrim[piece][0], piece[1], pieceSingleTrim[piece][1])
+        else:
+            newPiece = piece
         envyFreeAllocation[newPiece] = agents[agent].getId() if agent != -1 else -1
     
-    print(envyFreeAllocation)
+    print("Envy-free allocation", envyFreeAllocation)
     print("Exit SubCore")
     return envyFreeAllocation
             
-            
-                        
-            
+
         
 
 
