@@ -114,53 +114,53 @@ class TestSubcore(unittest.TestCase):
     #                 print("Comparing agent ", agents[agent].getId(),"'s piece ", piece, " to agent ", agents[otherAgent].getId(), "'s piece ", otherPiece)
     #                 self.assertGreaterEqual(pieceValue, agents[agent].evalCakePiece(otherPiece[0], otherPiece[1]))
     
-    # def test_counterexample(self):
-    #     print("Starting counterexample test")
-    #     agents = [
-    #         DiscreteCakeValuation([1,1,1,1,1,1,2,2,2,3,3,6,6], 0),
-    #         DiscreteCakeValuation([4,4,2,1,1,8,0,0,0,0,0,8,0], 1),
-    #         DiscreteCakeValuation([1,1,1,1,1,1,1,1,3,0,0,4,0], 2),
-    #         DiscreteCakeValuation([1,1,1,1,2,2,4,2,4,2,4,4,0], 3),
-    #         DiscreteCakeValuation([1,1,1,1,1,1,0,0,0,0,0,3,0], 4)
-    #     ]
+    def test_counterexample(self):
+        print("Starting counterexample test")
+        agents = [
+            DiscreteCakeValuation([1,1,1,1,1,1,2,2,2,3,3,6,6], 0),
+            DiscreteCakeValuation([4,4,2,1,1,8,0,0,0,0,0,8,0], 1),
+            DiscreteCakeValuation([1,1,1,1,1,1,1,1,3,0,0,4,0], 2),
+            DiscreteCakeValuation([1,1,1,1,2,2,4,2,4,2,4,4,0], 3),
+            DiscreteCakeValuation([1,1,1,1,1,1,0,0,0,0,0,3,0], 4)
+        ]
 
-    #     cake = (0, 13)
-    #     allocation = core(0, agents, cake)
+        cake = (0, 13)
+        allocation = core(0, agents, cake)
 
-    #     # Check that each agent got a piece that they valued the highest
-    #     for piece, agent in allocation.items():
-    #         if (agent == -1):
-    #             continue
-    #         print(piece, " -> ", agent)
-    #         pieceValue = agents[agent].evalCakePiece(piece[0], piece[1])
-    #         for otherPiece, otherAgent in allocation.items():
-    #             if (otherAgent != -1 and agent != otherAgent):
-    #                 print("Comparing agent ", agents[agent].getId(),"'s piece ", piece, " to agent ", agents[otherAgent].getId(), "'s piece ", otherPiece)
-    #                 self.assertGreaterEqual(pieceValue, agents[agent].evalCakePiece(otherPiece[0], otherPiece[1]))
+        # Check that each agent got a piece that they valued the highest
+        for piece, agent in allocation.items():
+            if (agent == -1):
+                continue
+            print(piece, " -> ", agent)
+            pieceValue = agents[agent].evalCakePiece(piece[0], piece[1])
+            for otherPiece, otherAgent in allocation.items():
+                if (otherAgent != -1 and agent != otherAgent):
+                    print("Comparing agent ", agents[agent].getId(),"'s piece ", piece, " to agent ", agents[otherAgent].getId(), "'s piece ", otherPiece)
+                    self.assertGreaterEqual(pieceValue, agents[agent].evalCakePiece(otherPiece[0], otherPiece[1]))
     
-    # def test_counterexample_varone(self):
-    #     print("Starting counterexample test")
-    #     agents = [
-    #         DiscreteCakeValuation([1,1,1,1,1,1,2,2,2,6,3,3,6], 0),
-    #         DiscreteCakeValuation([4,4,2,1,1,8,0,0,0,8,0,0,0], 1),
-    #         DiscreteCakeValuation([1,1,1,1,1,1,1,1,3,4,0,0,0], 2),
-    #         DiscreteCakeValuation([1,1,1,1,2,2,4,2,4,4,2,4,0], 3),
-    #         DiscreteCakeValuation([1,1,1,1,1,1,0,0,0,3,0,0,0], 4)
-    #     ]
+    def test_counterexample_varone(self):
+        print("Starting counterexample test")
+        agents = [
+            DiscreteCakeValuation([1,1,1,1,1,1,2,2,2,6,3,3,6], 0),
+            DiscreteCakeValuation([4,4,2,1,1,8,0,0,0,8,0,0,0], 1),
+            DiscreteCakeValuation([1,1,1,1,1,1,1,1,3,4,0,0,0], 2),
+            DiscreteCakeValuation([1,1,1,1,2,2,4,2,4,4,2,4,0], 3),
+            DiscreteCakeValuation([1,1,1,1,1,1,0,0,0,3,0,0,0], 4)
+        ]
 
-    #     cake = (0, 13)
-    #     allocation = core(0, agents, cake)
+        cake = (0, 13)
+        allocation = core(0, agents, cake)
 
-    #     # Check that each agent got a piece that they valued the highest
-    #     for piece, agent in allocation.items():
-    #         if (agent == -1):
-    #             continue
-    #         print(piece, " -> ", agent)
-    #         pieceValue = agents[agent].evalCakePiece(piece[0], piece[1])
-    #         for otherPiece, otherAgent in allocation.items():
-    #             if (otherAgent != -1 and agent != otherAgent):
-    #                 print("Comparing agent ", agents[agent].getId(),"'s piece ", piece, " to agent ", agents[otherAgent].getId(), "'s piece ", otherPiece)
-    #                 self.assertGreaterEqual(pieceValue, agents[agent].evalCakePiece(otherPiece[0], otherPiece[1]))
+        # Check that each agent got a piece that they valued the highest
+        for piece, agent in allocation.items():
+            if (agent == -1):
+                continue
+            print(piece, " -> ", agent)
+            pieceValue = agents[agent].evalCakePiece(piece[0], piece[1])
+            for otherPiece, otherAgent in allocation.items():
+                if (otherAgent != -1 and agent != otherAgent):
+                    print("Comparing agent ", agents[agent].getId(),"'s piece ", piece, " to agent ", agents[otherAgent].getId(), "'s piece ", otherPiece)
+                    self.assertGreaterEqual(pieceValue, agents[agent].evalCakePiece(otherPiece[0], otherPiece[1]))
 
     def test_counterexample_vartwo(self):
         print("Starting counterexample test")

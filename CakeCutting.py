@@ -50,6 +50,7 @@ def subCore(cakePieces: List[Tuple[int, int, Tuple[int]]], agents: List[CakeValu
             # First m agents are contesting for same m-1 pieces, called contested pieces
             # For each agent j, set newBenchmarks[j] to the max of benchmark[j] or value of the uncontested piece with highest value 
             for j in range(0, m+1):
+                newBenchmarks[j] = benchmarks[j]
                 for piece in agentRankings[j]:
                     if pieceAllocations[piece] == -1:
                         if agents[j].evalCakePiece(piece[0], piece[1]) > benchmarks[j][0]:
