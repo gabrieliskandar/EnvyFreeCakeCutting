@@ -63,7 +63,7 @@ def subCore(cakePieces: List[Tuple[int, int, Tuple[int]]], agents: List[CakeValu
             for j in range(0, m+1):
                 for piece in agentRankings[j]:
                     # If the piece is allocated and the agent's value is higher than the benchmark, trim the piece
-                    if pieceAllocations[piece] != -1 and agents[j].evalCakePiece(piece[0], piece[1]) > newBenchmarks[j][0]:
+                    if pieceAllocations[piece] != -1 and agents[j].evalCakePiece(piece[0], piece[1]) >= newBenchmarks[j][0]:
                         trim = agents[j].trimPieceToValue(piece[0], piece[1], newBenchmarks[j][0])
                         imaginaryValues = newBenchmarks[j][1] + (agents[j].getNextImaginaryValue(), )
                         pieceTrims[piece].append((j, trim, imaginaryValues))
